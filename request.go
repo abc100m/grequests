@@ -525,7 +525,8 @@ func buildURLParams(userURL string, params map[string]string) (string, error) {
 // 3. Any other header requested
 func addHTTPHeaders(ro *RequestOptions, req *http.Request) {
 	for key, value := range ro.Headers {
-		req.Header.Set(key, value)
+		// req.Header.Set(key, value)  //X-MS-Policykey --> X-Ms-Policykey, not as my wish
+		req.Header[key] = []string{value}
 	}
 
 	if ro.UserAgent != "" {

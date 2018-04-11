@@ -2,6 +2,8 @@ package grequests
 
 import (
 	"bytes"
+	"compress/gzip"
+	"compress/zlib"
 	"encoding/json"
 	"encoding/xml"
 	"io"
@@ -166,6 +168,24 @@ func (r *Response) populateResponseByteBuffer() {
 	// Did the server tell us how big the response is going to be?
 	if r.RawResponse.ContentLength > 0 {
 		r.internalByteBuffer.Grow(int(r.RawResponse.ContentLength))
+	}
+
+	//Auto decompress gzip/deflate
+	switch ce := r.Header.Get("Content-Encoding"); ce {
+	case "deflate", "gzip":
+		var body io.ReadCloser
+		var err error
+		if ce[0] == 'd' {
+			body, err = zlib.NewReader(r.RawResponse.Body)
+		} else {
+			body, err = gzip.NewReader(r.RawResponse.Body)
+		}
+		if err != nil {
+			r.Error = err
+			r.RawResponse.Body.Close()
+			return
+		}
+		r.RawResponse.Body = body
 	}
 
 	if _, err := io.Copy(r.internalByteBuffer, r); err != nil && err != io.EOF {
